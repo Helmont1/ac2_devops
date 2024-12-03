@@ -1,0 +1,40 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Start container') {
+            steps {
+                // Inicia o contêiner em segundo plano
+                  sh 'docker-compose -f /Users/user/Desktop/ac2_ca/docker-compose.staging.yml up -d --no-color'
+
+                  // Aguarda o serviço iniciar
+                  echo 'Waiting for the service to start...'
+                  sleep time: 60, unit: 'SECONDS'
+                  
+                  // Verifica os logs do serviço
+                  sh 'docker-compose -f /Users/user/Desktop/ac2_ca/docker-compose.staging.yml logs'
+
+                  // Verifica o status do contêiner
+                  sh 'docker-compose -f /Users/user/Desktop/ac2_ca/docker-compose.staging.yml ps'
+
+                
+            }
+        }
+
+        stage('Run tests against the container') {
+            steps {
+                echo 'Running tests against the service...'
+                // Testa o serviço com cURL
+                sh 'curl http://localhost:8686 || echo "Service not responding"'
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline completed'
+            // Derruba os contêineres, se necessário
+            sh 'docker-compose -f /Users/user/Desktop/ac2_ca/docker-compose.staging.yml down || echo "No containers to stop"'
+        }
+    }
+}
